@@ -2,6 +2,11 @@ from tkinter import *
 from tkinter.ttk import *
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 
+def new_file():
+    """Create a new file for editing"""
+    txt_edit.delete("1.0", END) #Delete content of textbox
+    root.title(f"Simple Text Editor v2.0 - New File")
+
 def open_file():
     """Open a file for editing"""
     filepath = askopenfilename(
@@ -72,6 +77,7 @@ menubar.add_cascade(menu=menu_view, label='View')
 bool_wrapText = BooleanVar()
 bool_wrapText.set(True)
 
+menu_file.add_command(label='New...', underline=0, command=new_file, accelerator='Ctrl+N')
 menu_file.add_command(label='Open...', underline=0, command=open_file, accelerator='Ctrl+O')
 menu_file.add_command(label='Save As...', command=saveas_file)
 
