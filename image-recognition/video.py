@@ -1,11 +1,14 @@
 import time
-
+import os
 import torch
 import numpy as np
 from torchvision import transforms,  models
-
 import cv2
 from PIL import Image
+
+
+def cls():
+    os.system('cls' if os.name=='nt' else 'clear')
 
 """
 Image Capture
@@ -28,8 +31,7 @@ preprocess = transforms.Compose([
 """
 Model Setup (mobilenet_v2)
 """
-# torch.backends.quantized.engine = 'qnnpack'
-net = torch.hub.load('pytorch/vision:v0.10.0', 'mobilenet_v2')  # models.quantization.mobilenet_v2(pretrained=True, quantize=True)
+net = torch.hub.load('pytorch/vision:v0.10.0', 'mobilenet_v2')
 net.eval()
 # jit model to take it from ~20fps to ~30fps
 #net = torch.jit.script(net)
@@ -74,11 +76,13 @@ with torch.no_grad():
 
         # Show top categories per image
         top5_prob, top5_catid = torch.topk(probabilities, 5)
+        
+        cls()
         for i in range(top5_prob.size(0)):
             print(categories[top5_catid[i]], top5_prob[i].item())
-        print('=====')
+        
 
-        cv2.imshow(categories[top5_catid[i]], image)
+        cv2.imshow(categories[top5_catid[i]], np.array(permuted))
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
