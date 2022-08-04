@@ -34,8 +34,6 @@ class NonLinear_QNet(nn.Module):
         self.linear_relu_stack = nn.Sequential(
             nn.Linear(input_size, hidden_size),
             nn.ReLU(),
-            nn.Linear(hidden_size, hidden_size),
-            nn.ReLU(),
             nn.Linear(hidden_size, output_size),
         )
         
