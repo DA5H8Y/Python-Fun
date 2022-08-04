@@ -155,8 +155,4 @@ def train(state_dict=None):
             plot(plot_scores, plot_mean_scores, str(agent.model))
 
 if __name__ == '__main__':
-    #if os.path.exists('./model/model.pth'):
-    #    print('[Loading State Disctionary...')
-    #    train('./model/model.pth')
-    #else:
     train()
