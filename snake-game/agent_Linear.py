@@ -16,7 +16,7 @@ LR = 0.001
 
 class Agent:
 
-    def __init__(self, state_dict):
+    def __init__(self):
         if torch.cuda.is_available():
             self.device = torch.device('cuda')
         else:
@@ -109,12 +109,13 @@ class Agent:
         
         return final_move
 
-def train(state_dict=None):
+def train():
     plot_scores = []
     plot_mean_scores = []
     total_score = 0
     record = 0
-    agent = Agent(state_dict)
+    agent = Agent()
+    agent.model.load()
     game = SnakeGameAI()
 
     # Training loop
@@ -143,7 +144,7 @@ def train(state_dict=None):
 
             if score > record:
                 record = score
-                agent.model.save()
+                agent.model.save(score=record)
             
             print('Game:', agent.n_games, 'Score:', score, 'Record:', record)
 

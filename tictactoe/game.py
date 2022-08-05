@@ -1,5 +1,6 @@
 import sys
 from matplotlib.backend_bases import MouseEvent
+import numpy as np
 import pygame as pg
 import sys
 import time
@@ -49,7 +50,7 @@ class TicTacToe():
      
         # updating the display
         pg.display.update()
-        time.sleep(3)                   
+        #time.sleep(0)                   
         self.screen.fill(self.bg_color)
   
         # drawing vertical lines
@@ -181,8 +182,22 @@ class TicTacToe():
             self.drawXO(row, col)
             self.check_win()
 
+    def play_step(self, final_move):
+        for x in range(9):
+            if final_move[x] == 1:
+                row = (x // 3) + 1
+                col = (x % 3) + 1
+                break
+
+        # after getting the row and col, we need to draw the images at the desired positions
+        if(row and col and self.board[row - 1][col - 1] is None):
+            self.drawXO(row, col)
+            self.check_win()
+        
+        return self.winner, self.draw
+
     def reset_game(self):
-        time.sleep(3)
+        time.sleep(0.5)
         self.xo = 'x'
         self.draw = False
         self.game_initiating_window()

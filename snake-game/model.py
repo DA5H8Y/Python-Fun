@@ -1,4 +1,5 @@
 from random import gammavariate
+import re
 from turtle import forward
 import torch
 import torch.nn as nn
@@ -20,13 +21,29 @@ class Linear_QNet(nn.Module):
         x = self.linear2(x)
         return x
     
-    def save(self, file_name='linear_model.pth'):
+    def save(self, file_name='linear_model', score=0):
         model_folder_path = './model'
         if not os.path.exists(model_folder_path):
             os.makedirs(model_folder_path)
 
         file_name = os.path.join(model_folder_path, file_name)
+        file_name = file_name + ('_' + str(score) + '.pth')
         torch.save(self.state_dict(), file_name)
+
+    def load(self, file_name='linear_model_[0-9]+\\.pth'):
+        model_folder_path = './model'    
+        file = os.path.join(model_folder_path, file_name)
+        if os.path.exists(file):
+            torch.load(file)
+        else:            
+            file_reg = re.compile(file_name)
+            for root, dirs, files in os.walk(model_folder_path):
+                for file in files:
+                    if file_reg.match(file):
+                        file = os.path.join(model_folder_path, file_name)
+                        print(file)
+                        torch.load(file)
+                        break
 
 class NonLinear_QNet(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
@@ -44,14 +61,70 @@ class NonLinear_QNet(nn.Module):
         logits = self.linear_relu_stack(x)
         return logits
     
-    def save(self, file_name='nolinear_model.pth'):
+    def save(self, file_name='nonlinear_model', score=0):
         model_folder_path = './model'
         if not os.path.exists(model_folder_path):
             os.makedirs(model_folder_path)
 
         file_name = os.path.join(model_folder_path, file_name)
+        file_name = file_name + ('_' + str(score) + '.pth')
         torch.save(self.state_dict(), file_name)
     
+    def load(self, file_name='nonlinear_model_\d{1,}.pth'):
+        model_folder_path = './model'    
+        file = os.path.join(model_folder_path, file_name)
+        if os.path.exists(file):
+            torch.load(file)
+        else:            
+            file_reg = re.compile(file_name)
+            for root, dirs, files in os.walk(model_folder_path):
+                for file in files:
+                    if re.match(file_reg, file):
+                        file = os.path.join(model_folder_path, file)
+                        print(file)
+                        torch.load(file)
+                        break
+
+class Complex_QNet(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size):
+        super(Complex_QNet, self).__init__()
+        self.linear_relu_stack = nn.Sequential(
+            nn.Linear(input_size, hidden_size),
+            nn.Sigmoid(),
+            nn.Linear(hidden_size, output_size)
+        )
+        
+    def __str__(self):
+        return 'Complex_QNet - useless for snake'
+
+    def forward(self, x):
+        logits = self.linear_relu_stack(x)
+        return logits
+    
+    def save(self, file_name='complex_model', score=0):
+        model_folder_path = './model'
+        if not os.path.exists(model_folder_path):
+            os.makedirs(model_folder_path)
+
+        file_name = os.path.join(model_folder_path, file_name)
+        file_name = file_name + ('_' + str(score) + '.pth')
+        torch.save(self.state_dict(), file_name)
+    
+    def load(self, file_name='complex_model_\d{1,}.pth'):
+        model_folder_path = './model'    
+        file = os.path.join(model_folder_path, file_name)
+        if os.path.exists(file):
+            torch.load(file)
+        else:            
+            file_reg = re.compile(file_name)
+            for root, dirs, files in os.walk(model_folder_path):
+                for file in files:
+                    if re.match(file_reg, file):
+                        file = os.path.join(model_folder_path, file)
+                        print(file)
+                        torch.load(file)
+                        break
+
 class QTrainer:
     def __init__(self, model, lr, gamma, device):
         self.lr = lr
