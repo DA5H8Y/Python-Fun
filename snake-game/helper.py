@@ -1,3 +1,4 @@
+from matplotlib import get_backend
 import matplotlib.pyplot as plt
 from IPython import display
 from numpy import block
@@ -5,8 +6,7 @@ from numpy import block
 plt.ion()
 
 def plot(scores, mean_scores, model_name=None):
-    display.clear_output(wait=True)
-    display.display(plt.gcf())
+    print(get_backend())
     plt.clf()
     plt.title('Training ' + model_name + '...')
     plt.xlabel('Number of Games')

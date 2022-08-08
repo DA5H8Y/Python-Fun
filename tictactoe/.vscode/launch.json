@@ -1,0 +1,40 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Play AI (Debug)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}\\agent.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": ["linear_model_25.pth"]
+        },
+        {
+            "name": "Train AI (Debug)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}\\agent.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "Play AI",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}\\agent.py",
+            "console": "integratedTerminal",
+            "args": ["linear_model_25.pth"]
+        },
+        {
+            "name": "Train AI",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}\\agent.py",
+            "console": "integratedTerminal",
+        }
+    ]
+}
