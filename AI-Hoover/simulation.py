@@ -291,7 +291,7 @@ class Hoover_Environement:
         if self.state_old.Load > self.state_new.Load:
             for x in range(self.state_old.Load):
                 self.score += 0.5
-            reward = 10
+            reward = self.state_old.Load * 10
         
         # 5. update ui and clock
         self._update_ui()
