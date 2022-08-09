@@ -1,4 +1,5 @@
 from opcode import stack_effect
+from operator import truediv
 from pickle import FALSE
 import pygame
 import random
@@ -17,10 +18,10 @@ class Direction(Enum):
     DOWN = 4
 
 class Point():
-    def __init__(self, x, y):
+    def __init__(self, x, y) -> None:
         self.x = x
         self.y = y
-        
+
     def __eq__(self, other):
         return ((self.x == other.x) & (self.y == other.y))
 
@@ -69,7 +70,7 @@ class Robot_Hover:
         if self.Suction:
             dirt = self._suck(dirt)
         
-        if self.Position == recharge & self.Power < 100:
+        if ((self.Position == recharge) and (self.Power < 100)):
             self.Motor = False
             self.Suction = False
             self.Recharge = True
@@ -198,7 +199,7 @@ class Hoover_Environement:
         y = random.randint(0, (self.h - 1 ) // 1 )
         self.dirt = Point(x, y)
 
-        if self.dirt in self.Robot.get_state().Position:
+        if self.dirt == self.Robot.get_state().Position:
             self._place_dirt()
 
     def play_step(self):
@@ -226,14 +227,15 @@ class Hoover_Environement:
             return reward, game_over, self.score
 
         # 4. place new food or just move
-        if self.dirt == None:
+        if self.dirt is None:
             self.score += 0.5
             reward = 10
             self._place_dirt()
    
         # 5. check for load dump
-        if self.state_old.Load > self.state_new:
-            self.score += 0.5
+        if self.state_old.Load > self.state_new.Load:
+            for x in range(self.state_old.Load):
+                self.score += 0.5
             reward = 10
         
         # 5. update ui and clock
