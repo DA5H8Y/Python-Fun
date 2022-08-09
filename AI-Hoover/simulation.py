@@ -1,6 +1,7 @@
 from opcode import stack_effect
 from operator import truediv
 from pickle import FALSE
+from tarfile import BLOCKSIZE
 import pygame
 import random
 from enum import Enum
@@ -31,22 +32,23 @@ RobotState = namedtuple('RobotState', 'Position, Direction, Power, Recharge, Suc
 WHITE = (255, 255, 255)
 RED = (200,0,0)
 BLUE1 = (0, 0, 255)
-BLUE2 = (0, 100, 255)
+BLUE2 = (0, 100, 100)
 GREEN = (0, 200, 0)
 BLACK = (0,0,0)
 
 BLOCK_SIZE = 20
 SPEED = 40
+MAX_POWER = 2000
 
 class Robot_Hover:
     def __init__(self, w, h) -> None:
         self.Position = Point(w/2, h/2)
         self.Direction = Direction.LEFT
         self.Motor = False
-        self.Power = 100
+        self.Power = MAX_POWER
         self.Suction = False
         self.Recharge = False
-        self.Capacity = 18 * 18
+        self.Capacity = 14 * 14
         self.Load = 0
         self.Width = w
         self.Height = h
@@ -55,22 +57,26 @@ class Robot_Hover:
         self.Position = Point(w, h)
         self.Direction = Direction.LEFT
         self.Motor = False
-        self.Power = 100
+        self.Power = MAX_POWER
         self.Suction = False
         self.Recharge = False
-        self.Capacity = 16 * 16
+        self.Capacity = 14 * 14
         self.Load = 0
         self.Width = w
         self.Height = h
 
     def update_step(self, recharge, bin, dirt):
-        if self.Motor:
-            self._move()
+        if self.Power > 0:
+            if self.Motor:
+                self._move()
         
-        if self.Suction:
-            dirt = self._suck(dirt)
+            if self.Suction:
+                dirt = self._suck(dirt)
+        else:
+            self.Motor = False
+            self.Suction = False
         
-        if ((self.Position == recharge) and (self.Power < 100)):
+        if ((self.Position == recharge) and (self.Power < MAX_POWER)):
             self.Motor = False
             self.Suction = False
             self.Recharge = True
@@ -87,14 +93,14 @@ class Robot_Hover:
     def get_state(self):
         return RobotState(self.Position, self.Direction, self.Power, self.Recharge, self.Suction, self.Motor, self.Load)
 
-    def command(self, event):
-        if event in (pygame.K_UP, pygame.K_DOWN):
+    def command(self, key):
+        if key in (pygame.K_UP, pygame.K_DOWN):
             self._lateral()
-        elif event == pygame.K_LEFT:
+        elif key == pygame.K_LEFT:
             self._rotation([0, 0, 1])
-        elif event == pygame.K_RIGHT:
+        elif key == pygame.K_RIGHT:
             self._rotation([0, 1, 0])
-        elif event == (pygame.K_SPACE):
+        elif key == (pygame.K_SPACE):
             # 3. Suction On/Off
             self._suction()
 
@@ -168,7 +174,7 @@ class Robot_Hover:
         
         if self.Recharge:
             self.Power += 1
-            self.Recharge = True if self.Power < 100 else False
+            self.Recharge = True if self.Power < MAX_POWER else False
 
 
 class Hoover_Environement:
@@ -179,7 +185,7 @@ class Hoover_Environement:
 
         # init display
         self.display = pygame.display.set_mode((self.w, self.h))
-        pygame.display.set_caption('Snake')
+        pygame.display.set_caption('Robot Hoover Simulation')
         self.clock = pygame.time.Clock()
         self.reset()
 
@@ -190,19 +196,19 @@ class Hoover_Environement:
         self.Bin = Point(0, 0 )
         self.Recharge = Point(0, self.h - BLOCK_SIZE)
         self.score = 0
-        self.food = None
+        self.dirt = None
         self._place_dirt()
         self.frame_iteration = 0
 
     def _place_dirt(self):
-        x = random.randint(0, (self.w - 1 ) // 1 )
-        y = random.randint(0, (self.h - 1 ) // 1 )
+        x = random.randint(0, (self.w - BLOCK_SIZE ) // BLOCK_SIZE ) * BLOCK_SIZE
+        y = random.randint(0, (self.h - BLOCK_SIZE ) // BLOCK_SIZE ) * BLOCK_SIZE
         self.dirt = Point(x, y)
 
         if self.dirt == self.Robot.get_state().Position:
             self._place_dirt()
 
-    def play_step(self):
+    def play_step_human(self):
         self.frame_iteration += 1
 
         # 1. collect user input
@@ -212,6 +218,55 @@ class Hoover_Environement:
                 quit()
             elif event.type == pygame.KEYDOWN:
                 self.Robot.command(event.key)
+        
+        # 2. Update Simulation
+        self.state_old = self.Robot.get_state()
+        self.dirt = self.Robot.update_step(self.Recharge, self.Bin, self.dirt)
+        self.state_new = self.Robot.get_state()
+
+        # 3. check if game over
+        game_over = False
+        if self.state_new.Power == 0 and not self.state_new.Recharge:
+            game_over = True
+            return game_over, self.score
+
+        # 4. place new food or just move
+        if self.dirt is None:
+            self.score += 0.5
+            self._place_dirt()
+   
+        # 5. check for load dump
+        if self.state_old.Load > self.state_new.Load:
+            for x in range(self.state_old.Load):
+                self.score += 0.5
+        
+        # 5. update ui and clock
+        self._update_ui()
+        self.clock.tick(SPEED)
+
+        # 6. return game over and score
+        return game_over, self.score
+
+    def play_step_ai(self, action):
+        self.frame_iteration += 1
+
+        # 1. collect user input
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+
+        if action == [1,0,0,0,0]:
+            self.Robot.command(pygame.K_SPACE)
+        elif action == [0,1,0,0,0]:
+            self.Robot.command(pygame.K_UP)
+        elif action == [0,0,1,0,0]:
+            self.Robot.command(pygame.K_LEFT)
+        elif action == [0,0,0,1,0]:
+            self.Robot.command(pygame.K_RIGHT)
+        else:
+            self.Robot.command(None)
+
         
         # 2. Update Simulation
         self.state_old = self.Robot.get_state()
@@ -252,7 +307,7 @@ class Hoover_Environement:
         pygame.draw.rect(self.display, RED, pygame.Rect(self.dirt.x, self.dirt.y, BLOCK_SIZE, BLOCK_SIZE))
 
         # 2. Draw Recharge
-        pygame.draw.rect(self.display, BLUE1, pygame.Rect(self.Recharge.x, self.Recharge.y, BLOCK_SIZE, BLOCK_SIZE))
+        pygame.draw.rect(self.display, BLUE2, pygame.Rect(self.Recharge.x, self.Recharge.y, BLOCK_SIZE, BLOCK_SIZE))
         pygame.draw.rect(self.display, BLACK, pygame.Rect(self.Recharge.x + 2, self.Recharge.y + 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4))
 
         # 2. Draw Bin
@@ -263,10 +318,18 @@ class Hoover_Environement:
         pos = self.state_new.Position
         pygame.draw.rect(self.display, BLUE1, pygame.Rect(pos.x, pos.y, BLOCK_SIZE, BLOCK_SIZE))
         pygame.draw.rect(self.display, WHITE, pygame.Rect(pos.x + 2, pos.y + 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4))
+        if self.state_new.Direction == Direction.UP:            
+            pygame.draw.rect(self.display, RED, pygame.Rect(pos.x + BLOCK_SIZE / 2, pos.y, 2, 2))
+        elif self.state_new.Direction == Direction.DOWN:
+            pygame.draw.rect(self.display, RED, pygame.Rect(pos.x + BLOCK_SIZE / 2, pos.y + BLOCK_SIZE, 2, 2))
+        elif self.state_new.Direction == Direction.LEFT:
+            pygame.draw.rect(self.display, RED, pygame.Rect(pos.x, pos.y + BLOCK_SIZE / 2, 2, 2))
+        elif self.state_new.Direction == Direction.RIGHT:
+            pygame.draw.rect(self.display, RED, pygame.Rect(pos.x + BLOCK_SIZE , pos.y + BLOCK_SIZE / 2, 2, 2))
 
         # 2. Draw power
-        for x in range(self.state_new.Power // 16):
-            pygame.draw.rect(self.display, BLUE2, pygame.Rect(pos.x + 2, pos.y + 2 + x, 1, 1))
+        for x in range(int(16 * (self.state_new.Power/MAX_POWER))):
+            pygame.draw.rect(self.display, BLUE2, pygame.Rect(pos.x + 2, pos.y + 2 + x, 2, 1))
         
         # 3. Draw state
         if self.state_new.Suction:            
@@ -278,9 +341,9 @@ class Hoover_Environement:
 
         # 4. Draw load
         for l in range(self.state_new.Load):
-            x = l // 16
-            y = l % 16
-            pygame.draw.rect(self.display, RED, pygame.Rect(pos.x + BLOCK_SIZE - 2, pos.y + y, 1, 1))
+            x = l // 14
+            y = l % 14
+            pygame.draw.rect(self.display, RED, pygame.Rect(pos.x + x + 4, pos.y + y + 4, 1, 1))
 
 
 
@@ -291,7 +354,10 @@ class Hoover_Environement:
 def main():
     sim = Hoover_Environement()
     while True:
-        sim.play_step()
+        game_over, score = sim.play_step_human()
+        if game_over:
+            sim.reset()
+            print(f'Game Score: {score}')
 
 if __name__ == '__main__':
     main()

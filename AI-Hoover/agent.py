@@ -5,7 +5,7 @@ import random
 import os
 import numpy as np
 from collections import deque
-from game import BLOCK_SIZE, SnakeGameAI, Direction, Point
+from simulation import BLOCK_SIZE, RobotState, Hoover_Environement, Direction, Point
 from model import Linear_QNet, QTrainer
 from helper import plot
 
@@ -26,51 +26,43 @@ class Agent:
         self.epsilon = 0 # randomness
         self.gamma = 0.85 # discount rate 0 -> 1
         self.memory = deque(maxlen=MAX_MEMORY) # popleft()
-        self.model = Linear_QNet(11, 256, 3).to(self.device)
+        self.model = Linear_QNet(21, 256, 5).to(self.device)
         self.trainer = QTrainer(self.model, lr=LR, gamma=self.gamma, device=self.device)
 
     def get_state(self, game):
-        head = game.snake[0]
-        point_l = Point(head.x - BLOCK_SIZE, head.y)
-        point_r = Point(head.x + BLOCK_SIZE, head.y)
-        point_u = Point(head.x, head.y - BLOCK_SIZE)
-        point_d = Point(head.x, head.y + BLOCK_SIZE)
-
-        dir_l = game.direction == Direction.LEFT
-        dir_r = game.direction == Direction.RIGHT
-        dir_u = game.direction == Direction.UP
-        dir_d = game.direction == Direction.DOWN
+        robot = game.Robot.get_state()
+        dir_l = robot.Direction == Direction.LEFT
+        dir_r = robot.Direction == Direction.RIGHT
+        dir_u = robot.Direction == Direction.UP
+        dir_d = robot.Direction == Direction.DOWN
 
         state = [
-            # Danger straight
-            (dir_l and game.is_collision(point_l)) or
-            (dir_r and game.is_collision(point_r)) or
-            (dir_u and game.is_collision(point_u)) or
-            (dir_d and game.is_collision(point_d)),
-
-            # Danger right
-            (dir_l and game.is_collision(point_u)) or
-            (dir_r and game.is_collision(point_d)) or
-            (dir_u and game.is_collision(point_r)) or
-            (dir_d and game.is_collision(point_l)),
-
-            # Danger left            
-            (dir_l and game.is_collision(point_d)) or
-            (dir_r and game.is_collision(point_u)) or
-            (dir_u and game.is_collision(point_l)) or
-            (dir_d and game.is_collision(point_r)),
-        
             # Move direction
             dir_l,
             dir_r,
             dir_u, 
             dir_d,
 
-            # Food direction
-            game.food.x < game.head.x, # food left
-            game.food.x > game.head.x, # food right
-            game.food.y < game.head.y, # food up
-            game.food.y > game.head.y  # food down 
+            # Robot State
+            robot.Power,
+            robot.Recharge,
+            robot.Suction,
+            robot.Motor,
+            robot.Load,
+
+            # Environement Locations
+            game.Bin.x <  robot.Position.x,
+            game.Bin.x >  robot.Position.x,
+            game.Bin.y <  robot.Position.y,
+            game.Bin.y >  robot.Position.y,
+            game.Recharge.x < robot.Position.x,
+            game.Recharge.x > robot.Position.x,
+            game.Recharge.y < robot.Position.y,
+            game.Recharge.y > robot.Position.y,
+            game.dirt.x < robot.Position.x,
+            game.dirt.x > robot.Position.x,
+            game.dirt.y < robot.Position.y,
+            game.dirt.y > robot.Position.y,
         ]
 
         return np.array(state, dtype=int)
@@ -86,10 +78,6 @@ class Agent:
         
         states, actions, rewards, next_states, dones = zip(*mini_sample)
         self.trainer.train_step(states, actions, rewards, next_states, dones)
-        ### Alternatively
-        # for state, action, rewards, next_state, done in mini_sample:
-        #   self.trainer.train_step(state, action, reward, next_state, done)
-        ###
         
     def train_short_memory(self, state, action, reward, next_state, done):
         self.trainer.train_step(state, action, reward, next_state, done)
@@ -97,9 +85,9 @@ class Agent:
     def get_action(self, state):
         # random moves: tradeoff exploration / exploitation
         self.epsilon = EXP_TRADE - self.n_games
-        final_move = [0,0,0]
+        final_move = [0,0,0,0,0]
         if random.randint(0, 200) < self.epsilon:
-            move = random.randint(0, 2)
+            move = random.randint(0, 4)
             final_move[move] = 1
         else:
             state0 = torch.tensor(state, dtype=torch.float).to(self.device)
@@ -116,7 +104,7 @@ def train():
     record = 0
     agent = Agent()
     agent.model.load()
-    game = SnakeGameAI()
+    game = Hoover_Environement()
 
     # Training loop
     while True:
@@ -127,7 +115,7 @@ def train():
         final_move = agent.get_action(state_old)
 
         # Perform move and get new state
-        reward, done, score = game.play_step(final_move)
+        reward, done, score = game.play_step_ai(final_move)
         state_new = agent.get_state(game)
 
         # Train Short Memory
