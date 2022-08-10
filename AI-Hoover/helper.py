@@ -6,7 +6,6 @@ from numpy import block
 plt.ion()
 
 def plot(scores, mean_scores, model_name=None):
-    print(get_backend())
     plt.clf()
     plt.title('Training ' + model_name + '...')
     plt.xlabel('Number of Games')

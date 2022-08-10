@@ -134,22 +134,8 @@ class Robot_Hover:
             y += BLOCK_SIZE
         elif self.Direction == Direction.UP:
             y -= BLOCK_SIZE
-        
-        if self._is_collision(Point(x, y)): # If it would be a collision stop
-            self.Position = self.Position
-            self.Motor = False
-        else:
-            self.Position = Point(x, y)
 
-    def _is_collision(self, pt=None):
-        if pt is None:
-            pt = self.Position
-
-        # hits boundary
-        if pt.x > self.Width - BLOCK_SIZE or pt.x < 0 or pt.y > self.Height - BLOCK_SIZE or pt.y < 0:
-            return True
-
-        return False
+        self.Position = Point(x, y)
 
     def _suck(self, dirt):
         if dirt == self.Position:
@@ -199,6 +185,7 @@ class Hoover_Environement:
         self.dirt = None
         self._place_dirt()
         self.frame_iteration = 0
+        self.Last_Dump = 0
 
     def _place_dirt(self):
         x = random.randint(0, (self.w - BLOCK_SIZE ) // BLOCK_SIZE ) * BLOCK_SIZE
@@ -207,6 +194,16 @@ class Hoover_Environement:
 
         if self.dirt == self.Robot.get_state().Position:
             self._place_dirt()
+
+    def is_collision(self, pt=None):
+        if pt is None:
+            pt = self.Robot.Position
+
+        # hits boundary
+        if pt.x > self.w - BLOCK_SIZE or pt.x < 0 or pt.y > self.h - BLOCK_SIZE or pt.y < 0:
+            return True
+
+        return False
 
     def play_step_human(self):
         self.frame_iteration += 1
@@ -226,7 +223,7 @@ class Hoover_Environement:
 
         # 3. check if game over
         game_over = False
-        if self.state_new.Power == 0 and not self.state_new.Recharge:
+        if (self.state_new.Power == 0 and not self.state_new.Recharge) or self.is_collision():
             game_over = True
             return game_over, self.score
 
@@ -239,6 +236,7 @@ class Hoover_Environement:
         if self.state_old.Load > self.state_new.Load:
             for x in range(self.state_old.Load):
                 self.score += 0.5
+            self.Last_Dump = self.frame_iteration
         
         # 5. update ui and clock
         self._update_ui()
@@ -256,14 +254,18 @@ class Hoover_Environement:
                 pygame.quit()
                 quit()
 
-        if action == [1,0,0,0,0]:
-            self.Robot.command(pygame.K_SPACE)
-        elif action == [0,1,0,0,0]:
+        if action == [1,0,0,0]:#,0]:
             self.Robot.command(pygame.K_UP)
-        elif action == [0,0,1,0,0]:
+            #self.Robot.command(pygame.K_SPACE)
+        elif action == [0,1,0,0]:#,0]:
             self.Robot.command(pygame.K_LEFT)
-        elif action == [0,0,0,1,0]:
+            #self.Robot.command(pygame.K_UP)
+        elif action == [0,0,1,0]:#,0]:
             self.Robot.command(pygame.K_RIGHT)
+            #self.Robot.command(pygame.K_LEFT)
+        elif action == [0,0,0,1]:#,0]:
+            self.Robot.command(None)
+            #self.Robot.command(pygame.K_RIGHT)
         else:
             self.Robot.command(None)
 
@@ -276,7 +278,8 @@ class Hoover_Environement:
         # 3. check if game over
         reward = 0
         game_over = False
-        if self.state_new.Power == 0 and not self.state_new.Recharge:
+        if ((self.state_new.Power == 0 and not self.state_new.Recharge) or self.is_collision() or
+           ((self.frame_iteration - self.Last_Dump)) > ((self.state_new.Load + 3) * 100)):
             game_over = True
             reward = -10
             return reward, game_over, self.score
@@ -293,11 +296,15 @@ class Hoover_Environement:
                 self.score += 0.5
             reward = self.state_old.Load * 10
         
-        # 5. update ui and clock
+        # 6. check for recharge
+        if self.state_new.Recharge and self.state_new.Power < MAX_POWER:
+            reward = 10
+
+        # 7. update ui and clock
         self._update_ui()
         self.clock.tick(SPEED)
 
-        # 6. return game over and score
+        # 8. return game over and score
         return reward, game_over, self.score
 
     def _update_ui(self):
