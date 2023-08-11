@@ -1,0 +1,1 @@
+DESCRIBE t_object;

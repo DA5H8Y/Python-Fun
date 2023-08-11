@@ -5,11 +5,20 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
+            "name": "Python: SELECT Query",
             "type": "python",
             "request": "launch",
-            "program": "${file}",
-            "args": ["-s", "127.0.0.1", "-u", "mainuser", "-p", "Nicedaysoft1!", "my-query.sql", "results.csv"],
+            "program": "sql_queryer.py",
+            "args": ["-s", "127.0.0.1", "-u", "root", "-p", "password", "-d", "sandbox", "verification-method.sql", "VerifyMethod-results.csv"],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Python: DESCRIBE Query",
+            "type": "python",
+            "request": "launch",
+            "program": "sql_queryer.py",
+            "args": ["-s", "127.0.0.1", "-u", "root", "-p", "password", "-d", "sandbox", "describe-table.sql", "describe-results.csv"],
             "console": "integratedTerminal",
             "justMyCode": true
         }

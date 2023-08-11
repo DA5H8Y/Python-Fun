@@ -1,6 +1,3 @@
-py -m venv .env
-.\.env\Scripts\activate
-py -m pip install -r requirements.txt
+py -m venv env
+cmd /k "cd /d .\env\Scripts & activate & cd /d ..\..\ & py -m pip install -r requirements.txt"
 
-rem if using a local pip archive
-rem py -m pip install --no-index --find-links=/local/dir/ requests
